@@ -3,60 +3,59 @@ from src import config
 from src.assets import Assets
 from src.models.model import GameModel
 
-
 class Renderer:
 
     def __init__(self, screen: pygame.Surface, assets: Assets) -> None:
+  
         self.screen = screen
         self.assets = assets
+        self.splash_rect = self.assets.splash.get_rect(
+            center=(config.SCREEN_WIDTH // 2, config.SCREEN_HEIGHT // 2)
+        )
 
     def draw(self, model: GameModel) -> None:
-        self.screen.fill(config.BLACK)
+        self.screen.blit(self.assets.nebula, (0, 0))
 
-        pygame.draw.rect(self.screen, config.PLAYER_COLOR, model.player.rect)
+        x_offset = int(model.debris_offset)
+        self.screen.blit(self.assets.debris, (x_offset, 0))
+        self.screen.blit(self.assets.debris, (x_offset - config.SCREEN_WIDTH, 0))
 
-        for bullet in model.bullets:
-            pygame.draw.rect(self.screen, config.BULLET_COLOR, bullet.rect)
+        if model.in_play:
+            for missile in model.missiles:
+                rect = self.assets.missile.get_rect(center=missile.pos)
+                self.screen.blit(self.assets.missile, rect)
 
-        for asteroid in model.asteroids:
-            pygame.draw.rect(self.screen, config.ASTEROID_COLOR, asteroid.rect)
+            for asteroid in model.asteroids:
+                rotated_ast = pygame.transform.rotate(self.assets.asteroid, -asteroid.angle)
+                rect = rotated_ast.get_rect(center=asteroid.pos)
+                self.screen.blit(rotated_ast, rect)
+
+            ship_img = (
+                self.assets.ship_thrust if model.ship.thrust else self.assets.ship_idle
+            )
+            rotated_ship = pygame.transform.rotate(ship_img, -model.ship.angle)
+            ship_rect = rotated_ship.get_rect(center=model.ship.pos)
+            self.screen.blit(rotated_ship, ship_rect)
+
+        for exp in model.explosions:
+            tile = self.assets.explosion_tiles[exp.frame]
+            self.screen.blit(tile, tile.get_rect(center=exp.pos))
+
+        if not model.in_play:
+            self.screen.blit(self.assets.splash, self.splash_rect)
 
         self._draw_hud(model)
-
-        if model.game_over:
-            self._draw_game_over(model.score)
 
         pygame.display.flip()
 
     def _draw_hud(self, model: GameModel) -> None:
-        score_surf = self.assets.hud_font.render(
-            f"Счет: {model.score}", True, config.WHITE
-        )
         lives_surf = self.assets.hud_font.render(
-            f"Жизни: {model.lives}", True, config.WHITE
+            f"Lives: {model.lives}", True, config.TEXT_COLOR
         )
-        self.screen.blit(score_surf, (15, 15))
+        score_surf = self.assets.hud_font.render(
+            f"Score: {model.score}", True, config.TEXT_COLOR
+        )
+        self.screen.blit(lives_surf, (60, 15))
         self.screen.blit(
-            lives_surf, (config.SCREEN_WIDTH - lives_surf.get_width() - 15, 15)
+            score_surf, (config.SCREEN_WIDTH - score_surf.get_width() - 60, 15)
         )
-
-    def _draw_game_over(self, final_score: int) -> None:
-        overlay = pygame.Surface(
-            (config.SCREEN_WIDTH, config.SCREEN_HEIGHT), pygame.SRCALPHA
-        )
-        overlay.fill((0, 0, 0, 175))
-        self.screen.blit(overlay, (0, 0))
-
-        title = self.assets.title_font.render("ИГРА ОКОНЧЕНА", True, config.ASTEROID_COLOR)
-        score_text = self.assets.hud_font.render(
-            f"Итоговый счет: {final_score}", True, config.WHITE
-        )
-        hint = self.assets.hud_font.render(
-            "Нажмите R для рестарта или ESC для выхода", True, config.WHITE
-        )
-
-        cx = config.SCREEN_WIDTH // 2
-        cy = config.SCREEN_HEIGHT // 2
-        self.screen.blit(title, title.get_rect(center=(cx, cy - 45)))
-        self.screen.blit(score_text, score_text.get_rect(center=(cx, cy + 5)))
-        self.screen.blit(hint, hint.get_rect(center=(cx, cy + 50)))

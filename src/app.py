@@ -4,10 +4,11 @@ from src.assets import Assets
 from src.models.model import GameModel
 from src.renderers.renderer import Renderer
 
+
 class App:
     def __init__(self) -> None:
         pygame.init()
-        pygame.display.set_caption("Простые астероиды — Лабораторная работа №4")
+        pygame.display.set_caption("Asteroids")
         self.screen = pygame.display.set_mode(
             (config.SCREEN_WIDTH, config.SCREEN_HEIGHT)
         )
@@ -29,20 +30,22 @@ class App:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if not self.model.in_play and self.renderer.splash_rect.collidepoint(event.pos):
+                    self.model.start_game()
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     self.running = False
                 elif event.key == pygame.K_SPACE:
-                    self.model.shoot()
-                elif event.key == pygame.K_r and self.model.game_over:
-                    self.model.reset()
+                    self.model.fire_missile()
 
     def _update(self) -> None:
         keys = pygame.key.get_pressed()
-        direction = 0
-        if keys[pygame.K_LEFT] or keys[pygame.K_a]:
-            direction -= 1
-        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
-            direction += 1
+        turn_dir = 0
+        if keys[pygame.K_LEFT]:
+            turn_dir -= 1
+        if keys[pygame.K_RIGHT]:
+            turn_dir += 1
 
-        self.model.update(direction, pygame.time.get_ticks())
+        thrusting = bool(keys[pygame.K_UP])
+        self.model.update(turn_dir, thrusting, pygame.time.get_ticks())
